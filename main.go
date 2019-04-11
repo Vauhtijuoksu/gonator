@@ -28,27 +28,32 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+func getDonations(url string) Donations {
+	var donations Donations
+
+	response, _ := http.Get(url)
+	responseData, _ := ioutil.ReadAll(response.Body)
+	json.Unmarshal(responseData, &donations)
+
+	return donations
+}
+
 func main() {
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		conn, _ := upgrader.Upgrade(w, r, nil)
 
-		response, _ := http.Get("https://oma.kummit.fi/f/Donation/GetDonations/?collectionId=COL-16-1229")
-
-		responseData, _ := ioutil.ReadAll(response.Body)
-
-		var donations Donations
-
-		json.Unmarshal(responseData, &donations)
-
-		if err := conn.WriteJSON(donations); err != nil {
-			return
-		}
+		var donationCount int
 		for {
-			time.Sleep(2 * time.Second)
-			// Write message to browser
-			if err := conn.WriteJSON(donations); err != nil {
-				return
+			donations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
+			if len(donations) > donationCount {
+				newDonations := donations[0 : len(donations)-donationCount]
+				// Write message to browser
+				if err := conn.WriteJSON(newDonations); err != nil {
+					return
+				}
 			}
+			donationCount = len(donations)
+			time.Sleep(10 * time.Second)
 		}
 	})
 
