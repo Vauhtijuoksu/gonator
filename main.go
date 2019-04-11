@@ -1,31 +1,30 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
-    "io/ioutil"
-    "time"
-    "encoding/json"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 type Donation struct {
-    DonationId          string  `json"DonationId"`
-    Name                string  `json"Name"`
-    Amount              float32 `json"Amount"`
-    Message             string  `json"Message"`
-    MessageAnswer       string  `json"Message"`
-    CollectorImageUrl   string  `json"CollectorImageUrl"`
-    CurrencySymbol      string  `json"CurrencySymbol"`
-    CollectionUrl       string  `json"CollaectionUrl"`
-    TransactionDate     string  `json"TransactionDate"`
+	DonationId        string  `json"DonationId"`
+	Name              string  `json"Name"`
+	Amount            float32 `json"Amount"`
+	Message           string  `json"Message"`
+	MessageAnswer     string  `json"Message"`
+	CollectorImageUrl string  `json"CollectorImageUrl"`
+	CurrencySymbol    string  `json"CurrencySymbol"`
+	CollectionUrl     string  `json"CollaectionUrl"`
+	TransactionDate   string  `json"TransactionDate"`
 }
 
 type Donations []Donation
 
-
 var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
+	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
 
@@ -33,21 +32,21 @@ func main() {
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		conn, _ := upgrader.Upgrade(w, r, nil)
 
-        response, _ := http.Get("https://oma.kummit.fi/f/Donation/GetDonations/?collectionId=COL-16-1229")
+		response, _ := http.Get("https://oma.kummit.fi/f/Donation/GetDonations/?collectionId=COL-16-1229")
 
-        responseData, _ := ioutil.ReadAll(response.Body)
+		responseData, _ := ioutil.ReadAll(response.Body)
 
-        var donations Donations
+		var donations Donations
 
-        json.Unmarshal(responseData, &donations)
+		json.Unmarshal(responseData, &donations)
 
-        if err := conn.WriteJSON(donations); err != nil {
-            return
-        }
+		if err := conn.WriteJSON(donations); err != nil {
+			return
+		}
 		for {
-            time.Sleep(2 * time.Second)
+			time.Sleep(2 * time.Second)
 			// Write message to browser
-            if err := conn.WriteJSON(donations); err != nil {
+			if err := conn.WriteJSON(donations); err != nil {
 				return
 			}
 		}
