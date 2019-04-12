@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -31,8 +32,14 @@ var upgrader = websocket.Upgrader{
 func getDonations(url string) Donations {
 	var donations Donations
 
-	response, _ := http.Get(url)
-	responseData, _ := ioutil.ReadAll(response.Body)
+	response, err := http.Get(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	responseData, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
 	json.Unmarshal(responseData, &donations)
 
 	return donations
@@ -40,7 +47,11 @@ func getDonations(url string) Donations {
 
 func main() {
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
-		conn, _ := upgrader.Upgrade(w, r, nil)
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		var donationCount int
 		for {
@@ -49,7 +60,7 @@ func main() {
 				newDonations := donations[0 : len(donations)-donationCount]
 				// Write message to browser
 				if err := conn.WriteJSON(newDonations); err != nil {
-					return
+					log.Fatal(err)
 				}
 			}
 			donationCount = len(donations)
@@ -58,7 +69,7 @@ func main() {
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "websockets.html")
+		http.ServeFile(w, r, "index.html")
 	})
 
 	http.ListenAndServe(":8080", nil)
