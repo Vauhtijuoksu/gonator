@@ -1,0 +1,37 @@
+<head>
+</head>
+<body>
+	<pre id="output"></pre>
+</body>
+
+<script>
+	var output = document.getElementById("output");
+	var socket = new WebSocket("ws://localhost:8080/donations");
+
+	var donations = []
+
+	socket.onmessage = function (event) {
+		var msg = JSON.parse(event.data);
+		msg.reverse().forEach(function(element) {
+			donations.push(element)
+		});
+
+		var html = ""
+		html += "<table>"
+		donations.slice().reverse().forEach(function(donation) {
+			html += "<tr><td>" + donation.Name + "</td>";
+			html += "<td>" + donation.Message + "</td>";
+			html += "<td>" + donation.Amount + "€" + "</td></tr>";
+		});
+		html += "</table>"
+		output.innerHTML = html;
+	};
+</script>
+
+<style>
+body {
+	max-width: 38rem;
+	padding: 2rem;
+	margin: auto;
+}
+</style>
