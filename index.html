@@ -1,40 +1,137 @@
 <head>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 </head>
 <body>
-	<pre id="output"></pre>
+<div id="stream">
+    <div class="progresbarholder">
+
+            <div class="bargoal">eeE</div>
+            <div class="bar" style="width:12%">56€</div>
+        </div>
+</div>
+<div id="donation"></div>
+<pre id="output"></pre>
 </body>
 
 <script>
-	var output = document.getElementById("output");
-	var socket = new WebSocket("ws://localhost:8080/donations");
+    var output = document.getElementById("output");
+    var socket = new WebSocket("ws://localhost:8080/donations");
+    var total = 0;
+    var donations = []
+    var latest = []
+    var goal = 500;
 
-	var donations = []
+    socket.onmessage = function (event) {
+        var msg = JSON.parse(event.data);
+        msg.reverse().forEach(function (element) {
+            donations.push(element)
+        });
+        latest.push(donations.slice().reverse()[0]);
+        if (latest.length === 1){
+            displaydonation()
+        }
 
-	socket.onmessage = function (event) {
-		var msg = JSON.parse(event.data);
-		msg.reverse().forEach(function(element) {
-			donations.push(element)
-		});
+        var html = ""
+        html += "<table>"
+        donations.slice().reverse().forEach(function (donation) {
+            total += donation.Amount
+            html += "<tr><td>" + donation.Name + "</td>";
+            html += "<td>" + donation.Message + "</td>";
+            html += "<td>" + donation.Amount + "€" + "</td></tr>";
+        });
+        html += "</table>"
+        output.innerHTML = html;
+    };
+    function displaydonation() {
+        console.log(latest)
+        $("#donation").show("slow")
+        $("#donation").text(latest[0].Name + " " + latest[0].Amount + "€");
+        setTimeout(removedonation, 15000)
+    }
+    function removedonation() {
+        latest.shift();
+        $("#donation").hide("slow");
+        if (latest.length > 0){
+            displaydonation()
+        }
+    }
+    setInterval(update, 500);
 
-		var html = ""
-		html += "<table>"
-		donations.slice().reverse().forEach(function(donation) {
-			html += "<tr><td>" + donation.Name + "</td>";
-			html += "<td>" + donation.Message + "</td>";
-			html += "<td>" + donation.Amount + "€" + "</td></tr>";
-		});
-		html += "</table>"
-		output.innerHTML = html;
-	};
+
+    function update() {
+        $(".bar").css("width", String(total/goal * 100) + "%" ).text(total + "€")
+        $(".bargoal").text(goal + "€")
+    }
+
 </script>
 
 <style>
-body {
-	max-width: 38rem;
-	padding: 2rem;
-	margin: auto;
+    @font-face {
+        font-family: 'electricboots';
+        src:  url('ELECTRICBOOTS.ttf') format('truetype');
+    }
 
-	background-color: black;
-	color: white;
-}
+    html {
+        padding: 0;
+        margin: 0;
+    }
+    body {
+        background-color: #061068;
+        color: white;
+        padding: 0;
+        font-size: 18px;
+        margin: 0;
+    }
+    table{
+        font-size: 18px;
+    }
+
+    #stream {
+        height: 100px;
+        padding: 20px;
+        font-size: 50px;
+        text-align: center;
+		background-color: black;
+        font-family: "electricboots";
+    }
+    #donation{
+        position: relative;
+        margin-top: -100px;
+        height: 100px;
+        font-size: 50px;
+        text-align: center;
+		background-color: black;
+        font-family: "electricboots";
+        z-index: 100;
+    }
+
+
+    .progresbarholder{
+        margin: 20px 0;
+        border: solid 3px white;
+        border-radius: 8px;
+        padding: 5px;
+        overflow: hidden;
+    }
+    .bar{
+        background-color: #00b702;
+        border-radius: 4px;
+        height: 50px;
+        padding-left: 13px;
+        box-sizing: border-box;
+        text-align: left;
+        line-height: 50px;
+    }
+    .bargoal{
+        float: right;
+        height: 50px;
+        line-height: 50px;
+        width: 100%;
+        text-align: right;
+        padding-right: 13px;
+        box-sizing: border-box;
+        margin-bottom: -50px;
+    }
+
 </style>
