@@ -26,6 +26,7 @@
         var msg = JSON.parse(event.data);
         msg.reverse().forEach(function (element) {
             donations.push(element)
+            total += element.Amount
         });
         latest.push(donations.slice().reverse()[0]);
         if (latest.length === 1){
@@ -35,7 +36,6 @@
         var html = ""
         html += "<table>"
         donations.slice().reverse().forEach(function (donation) {
-            total += donation.Amount
             html += "<tr><td>" + donation.Name + "</td>";
             html += "<td>" + donation.Message + "</td>";
             html += "<td>" + donation.Amount + "€" + "</td></tr>";
