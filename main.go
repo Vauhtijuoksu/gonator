@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -34,11 +34,11 @@ func getDonations(url string) Donations {
 
 	response, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	responseData, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	json.Unmarshal(responseData, &donations)
 
@@ -50,7 +50,7 @@ func main() {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 
 		var donationCount int
@@ -60,7 +60,7 @@ func main() {
 				newDonations := donations[0 : len(donations)-donationCount]
 				// Write message to browser
 				if err := conn.WriteJSON(newDonations); err != nil {
-					log.Fatal(err)
+					fmt.Println(err)
 				}
 			}
 			donationCount = len(donations)
