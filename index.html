@@ -16,13 +16,22 @@
 
 <script>
     var output = document.getElementById("output");
-    var socket = new WebSocket("ws://localhost:8080/donations");
+    var donationsocket = new WebSocket("ws://localhost:8080/donations");
+    var goalsocket = new WebSocket("ws://localhost:8080/goal");
     var total = 0;
     var donations = []
     var latest = []
-    var goal = 500;
+    var goal = 0;
 
-    socket.onmessage = function (event) {
+
+
+    goalsocket.onmessage = function (event) {
+
+	    goal = parseInt(event.data);
+	    update()
+    }
+
+    donationsocket.onmessage = function (event) {
         var msg = JSON.parse(event.data);
         msg.reverse().forEach(function (element) {
             donations.push(element)
@@ -44,7 +53,6 @@
         output.innerHTML = html;
     };
     function displaydonation() {
-        console.log(latest)
         $("#donation").show("slow")
         $("#donation").text(latest[0].Name + " " + latest[0].Amount + "€");
         setTimeout(removedonation, 15000)

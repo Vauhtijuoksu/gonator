@@ -29,8 +29,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func getDonations(url string) Donations {
-	var donations Donations
+func getFromApi(url string) []byte {
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -40,6 +39,24 @@ func getDonations(url string) Donations {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	return responseData
+}
+
+func getGoal(url string) int {
+	var goal int
+
+	responseData := getFromApi(url)
+	json.Unmarshal(responseData, &goal)
+
+	return goal
+
+}
+
+func getDonations(url string) Donations {
+	var donations Donations
+
+	responseData := getFromApi(url)
 	json.Unmarshal(responseData, &donations)
 
 	return donations
@@ -68,6 +85,26 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/goal", func(w http.ResponseWriter, r *http.Request) {
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		var goal int
+		for {
+			fetchgoal := getGoal("https://vauhtijuoksu.otit.fi/api/goal")
+			if fetchgoal != goal {
+				goal = fetchgoal
+				// Write message to browser
+				if err := conn.WriteJSON(goal); err != nil {
+					fmt.Println(err)
+				}
+			}
+			time.Sleep(60 * time.Second)
+		}
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
