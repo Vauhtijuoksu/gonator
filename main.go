@@ -62,6 +62,18 @@ func getDonations(url string) Donations {
 	return donations
 }
 
+func inList(donation Donation, donations Donations) bool {
+
+	for _, iterDonation := range donations {
+		if donation == iterDonation {
+			return true
+		}
+	}
+
+	return false
+
+}
+
 func main() {
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -70,17 +82,21 @@ func main() {
 			fmt.Println(err)
 		}
 
-		var donationCount int
+		var donations Donations
 		for {
-			donations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
-			if len(donations) > donationCount {
-				newDonations := donations[0 : len(donations)-donationCount]
-				// Write message to browser
-				if err := conn.WriteJSON(newDonations); err != nil {
-					fmt.Println(err)
+			fetchDonations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
+			var newDonations Donations
+			for _, donation := range fetchDonations {
+				if inList(donation, donations) == false {
+					donations = append(donations, donation)
+					newDonations = append(newDonations, donation)
 				}
 			}
-			donationCount = len(donations)
+			// Write message to browser
+			if err := conn.WriteJSON(newDonations); err != nil {
+				fmt.Println(err)
+			}
+
 			time.Sleep(10 * time.Second)
 		}
 	})
