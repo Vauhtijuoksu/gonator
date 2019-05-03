@@ -46,7 +46,7 @@
         html += "<table>"
         donations.slice().reverse().forEach(function (donation) {
             html += "<tr><td>" + donation.Name + "</td>";
-            html += "<td>" + donation.Message + "</td>";
+            html += "<td style='word-wrap: break-word'>" + donation.Message + "</td>";
             html += "<td>" + donation.Amount + "€" + "</td></tr>";
         });
         html += "</table>"
