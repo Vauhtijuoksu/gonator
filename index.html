@@ -23,6 +23,8 @@
     var latest = []
     var goal = 0;
 
+    $("#donation").hide();
+
 
 
     goalsocket.onmessage = function (event) {
@@ -32,27 +34,51 @@
     }
 
     donationsocket.onmessage = function (event) {
-        var msg = JSON.parse(event.data);
+        console.log("onmessage");
+        let first = false;
+        if (donations.length === 0){
+            console.log("first");
+            first = true;
+        }
+
+        let msg = JSON.parse(event.data);
         msg.reverse().forEach(function (element) {
-            donations.push(element)
-            total += element.Amount
+            let newdon = true;
+            for (let i=0; i < donations.length; i ++){
+                if (element.DonationId === donations[i].DonationId){
+                    donations[i].Name = element.Name;
+                    donations[i].Message = element.Message;
+                    newdon = false;
+                    latest.push(element)
+                }
+            }
+            if (newdon){
+                donations.push(element);
+                total += element.Amount;
+                if (element.Name !== "Anonyymi"){
+                    latest.push(element)
+                }
+            }
         });
-        latest.push(donations.slice().reverse()[0]);
-        if (latest.length === 1){
+        if (first){
+            latest = []
+        }
+        if (latest.length > 0){
             displaydonation()
         }
 
         var html = ""
         html += "<table>"
         donations.slice().reverse().forEach(function (donation) {
-            html += "<tr><td>" + donation.Name + "</td>";
-            html += "<td style='word-wrap: break-word'>" + donation.Message + "</td>";
-            html += "<td>" + donation.Amount + "€" + "</td></tr>";
+            html += "<tr><td class='name'>" + donation.Name + "</td>";
+            html += "<td class='message'>" + donation.Message + "</td>";
+            html += "<td class='amount'>" + donation.Amount + "€" + "</td></tr>";
         });
         html += "</table>"
         output.innerHTML = html;
     };
     function displaydonation() {
+        console.log("displaydon")
         $("#donation").show("slow")
         $("#donation").text(latest[0].Name + " " + latest[0].Amount + "€");
         setTimeout(removedonation, 15000)
@@ -83,9 +109,11 @@
     html {
         padding: 0;
         margin: 0;
+        max-width: 100%;
     }
     body {
         background-color: #061068;
+        max-width: 100%;
         color: white;
         padding: 0;
         font-size: 18px;
@@ -93,6 +121,25 @@
     }
     table{
         font-size: 18px;
+        width: 100%;
+        table-layout: fixed;
+    }
+    td{
+        word-wrap: break-word;
+        padding-bottom: 10px;
+    }
+    tr:nth-child(odd){
+        background-color: #131d74;
+    }
+
+    .amount{
+        width: 10%;
+    }
+    .message{
+        width: 65%%;
+    }
+    .name{
+        width: 25%;
     }
 
     #stream {
