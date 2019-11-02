@@ -1,7 +1,26 @@
 version: '3'
 services:
-        gonator:
-                build: .
-                ports:
-                        - "8080:8080"
+    gonator:
+        build: .
+        ports:
+            - "8080:8080"
+        networks:
+            - network1
+    mongodb:
+        image: mongo
+        ports:
+            - "27017:27017"
+        volumes:
+            - "mongodata:/data/db"
+        networks:
+            - network1
+        environment:
+            - MONGODB_INITDB_DATABASE=gonator
+              #- MONGODB_INITDB_ROOT_USERNAME=gonator
+              #- MONGODB_INITDB_ROOT_PASSWORD=gonator
 
+volumes:
+   mongodata:
+
+networks:
+   network1:

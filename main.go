@@ -1,25 +1,30 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Donation struct {
-	DonationId        string  `json"DonationId"`
-	Name              string  `json"Name"`
-	Amount            float32 `json"Amount"`
-	Message           string  `json"Message"`
-	MessageAnswer     string  `json"Message"`
-	CollectorImageUrl string  `json"CollectorImageUrl"`
-	CurrencySymbol    string  `json"CurrencySymbol"`
-	CollectionUrl     string  `json"CollaectionUrl"`
-	TransactionDate   string  `json"TransactionDate"`
+	DonationId        string  `json:"DonationId" bson:"donationId"`
+	Name              string  `json:"Name" bson:"nameDonator"`
+	Amount            float32 `json:"Amount" bson:"amountMoney"`
+	Message           string  `json:"Message" bson:"message"`
+	MessageAnswer     string  `json:"MessageAnswer" bson:"messageAnswer"`
+	CollectorImageUrl string  `json:"CollectorImageUrl" bson:"collectorImageurl"`
+	CurrencySymbol    string  `json:"CurrencySymbol" bson:"currencySymbol"`
+	CollectionUrl     string  `json:"CollaectionUrl" bson:"collectionUrl"`
+	TransactionDate   string  `json:"TransactionDate" bson:"transactionDate"`
 }
 
 type Donations []Donation
@@ -75,6 +80,53 @@ func inList(donation Donation, donations Donations) bool {
 }
 
 func main() {
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongodb:27017"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB")
+
+	collection := client.Database("gonator").Collection("donations")
+
+	for {
+		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
+
+		for _, donation := range fetchDonations {
+
+			var result Donation
+			//filter := bson.D{{"donationid", donation.DonationId}}
+			filter := bson.D{{}}
+			err = collection.FindOne(context.TODO(), filter).Decode(&result)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Println(result.Amount)
+
+			fmt.Printf("Found a single document: %+v\n", result)
+
+			if result.Amount == 0 || result.Name == "Anonyymi" && result.Message == "" {
+				insertResult, err := collection.InsertOne(context.TODO(), donation)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println("Inserted document: ", insertResult.InsertedID)
+			}
+
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -84,7 +136,7 @@ func main() {
 
 		var donations Donations
 		for {
-			fetchDonations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
+			fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
 			var newDonations Donations
 			for _, donation := range fetchDonations {
 				if inList(donation, donations) == false {
