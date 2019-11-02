@@ -49,9 +49,9 @@
                     if (donations[i].Name !== "Anonyymi" && donations[i].Message !== ""){
                         donations[i].Name = element.Name;
                         donations[i].Message = element.Message;
-                        newdon = false;
                         latest.push(element)
                     }
+                    newdon = false;
                 }
             }
             if (newdon){
