@@ -46,7 +46,7 @@
             let newdon = true;
             for (let i=0; i < donations.length; i ++){
                 if (element.DonationId === donations[i].DonationId){
-                    if (donations[i].Name !== "Anonyymi" && donations[i].Message !== ""){
+                    if (donations[i].Name === "Anonyymi" && donations[i].Message === ""){
                         donations[i].Name = element.Name;
                         donations[i].Message = element.Message;
                         latest.push(element)
