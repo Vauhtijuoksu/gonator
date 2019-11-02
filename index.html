@@ -39,30 +39,33 @@
         if (donations.length === 0){
             console.log("first");
             first = true;
-        }
+        } // check for first update after pageload
 
         let msg = JSON.parse(event.data);
         msg.reverse().forEach(function (element) {
             let newdon = true;
             for (let i=0; i < donations.length; i ++){
                 if (element.DonationId === donations[i].DonationId){
-                    donations[i].Name = element.Name;
-                    donations[i].Message = element.Message;
-                    newdon = false;
-                    latest.push(element)
+                    if (donations[i].Name !== "Anonyymi" && donations[i].Message !== ""){
+                        donations[i].Name = element.Name;
+                        donations[i].Message = element.Message;
+                        newdon = false;
+                        latest.push(element)
+                    }
                 }
             }
             if (newdon){
                 donations.push(element);
                 total += element.Amount;
-                if (element.Name !== "Anonyymi"){
+                update()
+                if (element.Name !== "Anonyymi" && element.Message !== ""){
                     latest.push(element)
                 }
             }
         });
         if (first){
             latest = []
-        }
+        } // do not display everything after pageload
         if (latest.length > 0){
             displaydonation()
         }
@@ -90,7 +93,7 @@
             displaydonation()
         }
     }
-    setInterval(update, 500);
+    // setInterval(update, 500);
 
 
     function update() {
