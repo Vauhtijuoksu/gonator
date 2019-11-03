@@ -79,6 +79,42 @@ func inList(donation Donation, donations Donations) bool {
 
 }
 
+func apiPoll (collection *mongo.Collection) {
+	for {
+		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
+
+		for _, donation := range fetchDonations {
+
+			var result Donation
+			filter := bson.D{{"donationId", donation.DonationId}}
+			err := collection.FindOne(context.TODO(), filter).Decode(&result)
+			if err != nil {
+				if err.Error() == "mongo: no documents in result" {
+					insertResult, err := collection.InsertOne(context.TODO(), donation)
+					fmt.Println("Inserted document: ", insertResult.InsertedID)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}else {
+					log.Fatal(err)
+				}
+			} else if result.Name == "Anonyymi" && result.Message == "" {
+				update := bson.D{
+					{"$set", bson.D{{"message", donation.Message}}},
+					{"$set", bson.D{{"name", donation.Name}}},
+				}
+				updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
 func main() {
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -96,6 +132,7 @@ func main() {
 	fmt.Println("Connected to MongoDB")
 
 	collection := client.Database("gonator").Collection("donations")
+	go apiPoll(collection)
 
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -149,29 +186,4 @@ func main() {
 
 	http.ListenAndServe(":8080", nil)
 
-	for {
-		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
-
-		for _, donation := range fetchDonations {
-
-			var result Donation
-			filter := bson.D{{"donationId", donation.DonationId}}
-			err = collection.FindOne(context.TODO(), filter).Decode(&result)
-			if err != nil {
-				if err.Error() == "mongo: no documents in result" {
-					insertResult, err := collection.InsertOne(context.TODO(), donation)
-					fmt.Println("Inserted document: ", insertResult.InsertedID)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}else {
-					log.Fatal(err)
-				}
-			} else if result.Name == "Anonyymi" && result.Message == "" {
-				fmt.Println("test")
-			}
-
-		}
-		time.Sleep(10 * time.Second)
-	}
 }
