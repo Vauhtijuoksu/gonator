@@ -97,36 +97,6 @@ func main() {
 
 	collection := client.Database("gonator").Collection("donations")
 
-	for {
-		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
-
-		for _, donation := range fetchDonations {
-
-			var result Donation
-			//filter := bson.D{{"donationid", donation.DonationId}}
-			filter := bson.D{{}}
-			err = collection.FindOne(context.TODO(), filter).Decode(&result)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Println(result.Amount)
-
-			fmt.Printf("Found a single document: %+v\n", result)
-
-			if result.Amount == 0 || result.Name == "Anonyymi" && result.Message == "" {
-				insertResult, err := collection.InsertOne(context.TODO(), donation)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println("Inserted document: ", insertResult.InsertedID)
-			}
-
-		}
-
-		time.Sleep(10 * time.Second)
-	}
-
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -178,4 +148,30 @@ func main() {
 	})
 
 	http.ListenAndServe(":8080", nil)
+
+	for {
+		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
+
+		for _, donation := range fetchDonations {
+
+			var result Donation
+			filter := bson.D{{"donationId", donation.DonationId}}
+			err = collection.FindOne(context.TODO(), filter).Decode(&result)
+			if err != nil {
+				if err.Error() == "mongo: no documents in result" {
+					insertResult, err := collection.InsertOne(context.TODO(), donation)
+					fmt.Println("Inserted document: ", insertResult.InsertedID)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}else {
+					log.Fatal(err)
+				}
+			} else if result.Name == "Anonyymi" && result.Message == "" {
+				fmt.Println("test")
+			}
+
+		}
+		time.Sleep(10 * time.Second)
+	}
 }
