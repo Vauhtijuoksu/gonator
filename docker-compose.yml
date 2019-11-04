@@ -1,26 +1,56 @@
 version: '3'
 services:
     gonator:
-        build: .
+        build:
+            context: "."
+            dockerfile: "Dockerfile"
         ports:
             - "8080:8080"
         networks:
             - network1
-    mongodb:
-        image: mongo
-        ports:
-            - "27017:27017"
+    mongo1:
+        image: mongo:4.2
         volumes:
-            - "./mongodata:/data/db"
+            - "./mongodata1:/data/db"
+        networks:
+            - network1
+        ports:
+            - "30001:27017"
+        environment:
+            - MONGODB_INITDB_DATABASE=gonator
+        command: ["mongod", "--replSet", "jump-set"]
+
+    mongo2:
+        image: mongo:4.2
+        volumes:
+            - "./mongodata2:/data/db"
+        networks:
+            - network1
+        ports:
+            - "30002:27017"
+        environment:
+            - MONGODB_INITDB_DATABASE=gonator
+        command: ["mongod", "--replSet", "jump-set"]
+
+    mongo3:
+        image: mongo:4.2
+        volumes:
+            - "./mongodata3:/data/db"
         networks:
             - network1
         environment:
             - MONGODB_INITDB_DATABASE=gonator
-              #- MONGODB_INITDB_ROOT_USERNAME=gonator
-              #- MONGODB_INITDB_ROOT_PASSWORD=gonator
+        ports:
+            - "30003:27017"
+        command: ["mongod", "--replSet", "jump-set"]
 
-volumes:
-   mongodata:
+    mongosetup:
+        image: mongo:4.2
+        volumes:
+            - ./scripts:/scripts
+        networks:
+            - network1
+        entrypoint: ["bash", "/scripts/mongoSetup.sh"]
 
 networks:
    network1:

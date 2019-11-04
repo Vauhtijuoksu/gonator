@@ -101,7 +101,7 @@ func apiPoll (collection *mongo.Collection) {
 			} else if result.Name == "Anonyymi" && result.Message == "" {
 				update := bson.D{
 					{"$set", bson.D{{"message", donation.Message}}},
-					{"$set", bson.D{{"name", donation.Name}}},
+					{"$set", bson.D{{"nameDonator", donation.Name}}},
 				}
 				updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
 				if err != nil {
@@ -117,8 +117,8 @@ func apiPoll (collection *mongo.Collection) {
 
 func main() {
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongodb:27017"))
+	ctx := context.Background()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,22 +141,50 @@ func main() {
 			fmt.Println(err)
 		}
 
+		findOptions := options.Find()
+		cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var donations Donations
-		for {
-			fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
-			var newDonations Donations
-			for _, donation := range fetchDonations {
-				if inList(donation, donations) == false {
-					donations = append(donations, donation)
-					newDonations = append(newDonations, donation)
-				}
-			}
-			// Write message to browser
-			if err := conn.WriteJSON(newDonations); err != nil {
-				fmt.Println(err)
+		for cur.Next(context.TODO()) {
+			var donation Donation
+
+			err := cur.Decode(&donation)
+			if err != nil {
+				log.Fatal(err)
 			}
 
-			time.Sleep(10 * time.Second)
+			donations = append(donations, donation)
+
+		}
+
+		if err := conn.WriteJSON(donations); err != nil {
+			fmt.Println(err)
+		}
+
+		cs, err := collection.Watch(ctx, mongo.Pipeline{}, options.ChangeStream().SetFullDocument(options.UpdateLookup))
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer cs.Close(ctx)
+
+		for cs.Next(ctx) {
+			// var donations Donations
+			var donation Donation
+
+			err := cs.Decode(&donation)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Println(donation.Name)
+			donations = append(donations, donation)
+			// Write message to browser
+			if err := conn.WriteJSON(donations); err != nil {
+				fmt.Println(err)
+			}
 		}
 	})
 
