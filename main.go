@@ -27,13 +27,16 @@ type Donation struct {
 	TransactionDate   string  `json:"TransactionDate" bson:"transactionDate"`
 }
 
-type DonationUpdate struct {
-	OperationType   string  `bson:"operationType"`
-	FullDocument    Donation  `bson:"fullDocument"`
-}
-
 type Donations []Donation
 
+type DonationMessage struct {
+	OperationType string   `bson:"operationType"`
+	Donation      Donation `bson:"fullDocument"`
+}
+
+type UpdateWebsocket struct {
+	Donations []DonationMessage `json:"Donations"`
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -85,9 +88,9 @@ func inList(donation Donation, donations Donations) bool {
 
 }
 
-func apiPoll (collection *mongo.Collection) {
+func apiPoll(collection *mongo.Collection) {
 	for {
-		fetchDonations := getDonations("https://oma.pelastakaalapset.fi/f/Donation/GetDonations/?collectionId=COL-6-3619&pageSize=10000&startAt=0")
+		fetchDonations := getDonations("http://192.168.43.155:5000/donates")
 
 		for _, donation := range fetchDonations {
 
@@ -101,7 +104,7 @@ func apiPoll (collection *mongo.Collection) {
 					if err != nil {
 						log.Fatal(err)
 					}
-				}else {
+				} else {
 					log.Fatal(err)
 				}
 			} else if result.Name == "Anonyymi" && result.Message == "" {
@@ -153,23 +156,27 @@ func main() {
 			log.Fatal(err)
 		}
 
-		var donations Donations
+		var updateWebsocket UpdateWebsocket
+
 		for cur.Next(context.TODO()) {
 			var donation Donation
+			var donationMessage DonationMessage
 
 			err := cur.Decode(&donation)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			donations = append(donations, donation)
+			donationMessage.Donation = donation
+			donationMessage.OperationType = "insert"
+
+			updateWebsocket.Donations = append(updateWebsocket.Donations, donationMessage)
 
 		}
 
-		if err := conn.WriteJSON(donations); err != nil {
+		if err := conn.WriteJSON(updateWebsocket); err != nil {
 			fmt.Println(err)
 		}
-
 
 		ctx := context.Background()
 		clientWach, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
@@ -186,17 +193,17 @@ func main() {
 
 		for cs.Next(ctx) {
 			// var donations Donations
-			var donationUpdate DonationUpdate
+			var updateWebsocket UpdateWebsocket
+			var donationMessage DonationMessage
 
-			err := cs.Decode(&donationUpdate)
+			err := cs.Decode(&donationMessage)
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println("test")
-			donations = append(donations, donationUpdate.FullDocument)
-			fmt.Println(donationUpdate.FullDocument)
+			updateWebsocket.Donations = append(updateWebsocket.Donations, donationMessage)
+			fmt.Println(updateWebsocket)
 			// Write message to browser
-			if err := conn.WriteJSON(donations); err != nil {
+			if err := conn.WriteJSON(updateWebsocket); err != nil {
 				fmt.Println(err)
 			}
 		}

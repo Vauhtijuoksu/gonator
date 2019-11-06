@@ -42,6 +42,7 @@
         } // check for first update after pageload
 
         let msg = JSON.parse(event.data);
+        console.log(msg);
         msg.reverse().forEach(function (element) {
             let newdon = true;
             for (let i=0; i < donations.length; i ++){
