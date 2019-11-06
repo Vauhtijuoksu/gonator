@@ -27,7 +27,13 @@ type Donation struct {
 	TransactionDate   string  `json:"TransactionDate" bson:"transactionDate"`
 }
 
+type DonationUpdate struct {
+	OperationType   string  `bson:"operationType"`
+	FullDocument    Donation  `bson:"fullDocument"`
+}
+
 type Donations []Donation
+
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -117,7 +123,7 @@ func apiPoll (collection *mongo.Collection) {
 
 func main() {
 
-	ctx := context.Background()
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
 	if err != nil {
 		log.Fatal(err)
@@ -164,6 +170,14 @@ func main() {
 			fmt.Println(err)
 		}
 
+
+		ctx := context.Background()
+		clientWach, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		collection := clientWach.Database("gonator").Collection("donations")
+
 		cs, err := collection.Watch(ctx, mongo.Pipeline{}, options.ChangeStream().SetFullDocument(options.UpdateLookup))
 		if err != nil {
 			log.Fatal(err)
@@ -172,15 +186,15 @@ func main() {
 
 		for cs.Next(ctx) {
 			// var donations Donations
-			var donation Donation
+			var donationUpdate DonationUpdate
 
-			err := cs.Decode(&donation)
+			err := cs.Decode(&donationUpdate)
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			fmt.Println(donation.Name)
-			donations = append(donations, donation)
+			fmt.Println("test")
+			donations = append(donations, donationUpdate.FullDocument)
+			fmt.Println(donationUpdate.FullDocument)
 			// Write message to browser
 			if err := conn.WriteJSON(donations); err != nil {
 				fmt.Println(err)
