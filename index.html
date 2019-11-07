@@ -47,7 +47,7 @@
         let msg = JSON.parse(event.data);
         console.log(msg);
 
-        msg["Donations"].reverse().forEach(function (d) {
+        msg["Donations"].forEach(function (d) {
             if (d["OperationType"] === "insert"){
                 donations.push(d["Donation"]);
                 total += d["Donation"].Amount
@@ -85,7 +85,7 @@
 
         var html = "";
         html += "<table>";
-        donations.slice().reverse().forEach(function (donation) {
+        donations.slice().forEach(function (donation) {
             html += "<tr><td class='name'>" + donation.Name + "</td>";
             html += "<td class='message'>" + donation.Message + "</td>";
             html += "<td class='amount'>" + donation.Amount + "€" + "</td></tr>";
