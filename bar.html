@@ -7,7 +7,8 @@
     <div class="progresbarholder">
 
             <div class="bargoal">ee<span class='e'>e</span></div>
-            <div class="bar" style="width:12%">56<span class='e'>e</span></div>
+            <div class="barcurrent">56<span class='e'>e</span></div>
+            <div class="bar" style="width:12%"></div>
         </div>
 </div>
 <div id="donation"></div>
@@ -89,7 +90,8 @@
     }
 
     function update() {
-        $(".bar").css("width", String(total/goal * 100) + "%" ).html(total + "<span class='e'>e</span>")
+        $(".bar").css("width", String(total/goal * 100) + "%" )
+        $(".barcurrent").html(total + "<span class='e'>e</span>")
         $(".bargoal").html(goal + "<span class='e'>e</span>")
     }
 
@@ -129,7 +131,7 @@
     }
     #donation{
         position: absolute;
-        top: 0;
+        top: -3px;
         right: 0;
         bottom: 0;
         left: 0;
@@ -154,7 +156,7 @@
 
     .bargoal{
         position: absolute;
-        top: 0;
+        top: -3px;
         right: 0;
         bottom: 0;
         left: 0;
@@ -162,11 +164,24 @@
         height: 100%;
         width: 100%;
         text-align: right;
-        padding-right: 13px;
+        padding-right: 20px;
         box-sizing: border-box;
-        margin-bottom: -20px;
 
         line-height: 100vh;
     }
+    .barcurrent{
+        position: absolute;
+        top: -3px;
+        right: 0;
+        bottom: 0;
+        left: 0;
 
+        height: 100%;
+        width: 100%;
+        text-align: left;
+        padding-left: 20px;
+        box-sizing: border-box;
+
+        line-height: 100vh;
+    }
 </style>
