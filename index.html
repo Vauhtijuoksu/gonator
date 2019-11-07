@@ -85,7 +85,7 @@
 
         var html = "";
         html += "<table>";
-        donations.slice().forEach(function (donation) {
+        donations.slice().reverse().forEach(function (donation) {
             html += "<tr><td class='name'>" + donation.Name + "</td>";
             html += "<td class='message'>" + donation.Message + "</td>";
             html += "<td class='amount'>" + donation.Amount + "€" + "</td></tr>";
