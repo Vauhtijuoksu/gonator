@@ -15,7 +15,7 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # Copy our static executable.
-COPY --from=builder /app/index.html /app/gonator /
+COPY --from=builder /app/index.html /app/bar.html /app/ELECTRICBOOTS.ttf /app/gonator /
 
 # Run the hello binary.
 ENTRYPOINT ["/gonator"]

@@ -90,7 +90,7 @@ func inList(donation Donation, donations Donations) bool {
 
 func apiPoll(collection *mongo.Collection) {
 	for {
-		fetchDonations := getDonations("https://www.otit.fi/vjtesting/donates")
+		fetchDonations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
 
 		for _, donation := range fetchDonations {
 
@@ -231,6 +231,11 @@ func main() {
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
+	})
+
+
+	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "bar.html")
 	})
 
 	http.ListenAndServe(":8080", nil)
