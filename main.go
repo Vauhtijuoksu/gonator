@@ -90,7 +90,7 @@ func inList(donation Donation, donations Donations) bool {
 
 func apiPoll(collection *mongo.Collection) {
 	for {
-		fetchDonations := getDonations("http://192.168.43.155:5000/donates")
+		fetchDonations := getDonations("https://www.otit.fi/vjtesting/donates")
 
 		for _, donation := range fetchDonations {
 
@@ -168,7 +168,7 @@ func main() {
 			}
 
 			donationMessage.Donation = donation
-			donationMessage.OperationType = "insert"
+			donationMessage.OperationType = "firstInsert"
 
 			updateWebsocket.Donations = append(updateWebsocket.Donations, donationMessage)
 
