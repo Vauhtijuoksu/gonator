@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -37,6 +38,13 @@ type DonationMessage struct {
 type UpdateWebsocket struct {
 	Donations []DonationMessage `json:"Donations"`
 }
+
+type Hashtag struct {
+	Name   string  `bson:"nameHashtag"`
+	Amount float32 `bson:"amount"`
+}
+
+type Hashtags []Hashtag
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -88,21 +96,45 @@ func inList(donation Donation, donations Donations) bool {
 
 }
 
-func apiPoll(collection *mongo.Collection) {
+func parseHashtags(message string, amount float32) Hashtags {
+	var hashtagsName []string
+	for _, word := range strings.Split(message, " ") {
+		if strings.HasPrefix(word, "#") && len(word) > 1 {
+			hashtagsName = append(hashtagsName, word)
+		}
+	}
+
+	hashtagAmount := amount / float32(len(hashtagsName))
+
+	var hashtags Hashtags
+	for _, hashtagName := range hashtagsName {
+		var hashtag Hashtag
+		hashtag.Name = hashtagName
+		hashtag.Amount = hashtagAmount
+	}
+
+	return hashtags
+}
+
+func apiPoll(collection *mongo.Collection, hashtagCollection *mongo.Collection) {
 	for {
 		fetchDonations := getDonations("http://192.168.43.155:5000/donates")
 
 		for _, donation := range fetchDonations {
 
+			var hashtags Hashtags
 			var result Donation
 			filter := bson.D{{"donationId", donation.DonationId}}
 			err := collection.FindOne(context.TODO(), filter).Decode(&result)
 			if err != nil {
 				if err.Error() == "mongo: no documents in result" {
-					insertResult, err := collection.InsertOne(context.TODO(), donation)
-					fmt.Println("Inserted document: ", insertResult.InsertedID)
+					_, err := collection.InsertOne(context.TODO(), donation)
 					if err != nil {
 						log.Fatal(err)
+					}
+
+					if strings.Contains(donation.Message, "#") {
+						hashtags = parseHashtags(donation.Message, donation.Amount)
 					}
 				} else {
 					log.Fatal(err)
@@ -112,12 +144,37 @@ func apiPoll(collection *mongo.Collection) {
 					{"$set", bson.D{{"message", donation.Message}}},
 					{"$set", bson.D{{"nameDonator", donation.Name}}},
 				}
-				updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
+				_, err := collection.UpdateOne(context.TODO(), filter, update)
 				if err != nil {
 					log.Fatal(err)
 				}
+				if strings.Contains(donation.Message, "#") {
+					hashtags = parseHashtags(donation.Message, donation.Amount)
+				}
+			}
 
-				fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+			if len(hashtags) != 0 {
+				for _, hashtag := range hashtags {
+					filter := bson.D{{"hashtag", hashtag.Name}}
+					err := collection.FindOne(context.TODO(), filter).Decode(&result)
+					if err != nil {
+						if err.Error() == "mongo: no documents in result" {
+							fmt.Println(hashtag)
+							_, _ = hashtagCollection.InsertOne(context.TODO(), hashtag)
+						} else {
+							log.Fatal(err)
+						}
+					}
+					update := bson.D{
+						{"$set", bson.D{{"hashtag", hashtag.Name}}},
+						{"$inc", bson.D{{"amount", hashtag.Amount}}},
+					}
+					fmt.Println(hashtag)
+					_, err = collection.UpdateOne(context.TODO(), filter, update)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
 			}
 		}
 		time.Sleep(10 * time.Second)
@@ -141,7 +198,8 @@ func main() {
 	fmt.Println("Connected to MongoDB")
 
 	collection := client.Database("gonator").Collection("donations")
-	go apiPoll(collection)
+	hashtagCollection := client.Database("gonator").Collection("hashtags")
+	go apiPoll(collection, hashtagCollection)
 
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
