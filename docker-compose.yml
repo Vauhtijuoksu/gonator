@@ -8,6 +8,8 @@ services:
             - "8080:8080"
         networks:
             - network1
+        volumes:
+            - ./index.html:/index.html
     mongo1:
         image: mongo:4.2
         volumes:

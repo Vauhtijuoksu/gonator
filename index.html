@@ -11,18 +11,27 @@
         </div>
 </div>
 <div id="donation"></div>
-<pre id="output"></pre>
+<div id="outputs">
+<div id="donates">
+    <pre id="output"></pre>
+</div>
+    <div id="tags">
+        <pre id="tagoutput"></pre>
+    </div>
+    </div>
 </body>
 
 <script>
     var output = document.getElementById("output");
+    var tagoutput = document.getElementById("tagoutput");
     var donationsocket = new WebSocket("ws://localhost:8080/donations");
     var goalsocket = new WebSocket("ws://localhost:8080/goal");
     var total = 0;
     var donations = []
     var latest = []
     var goal = 0;
-
+    var hashtags = {}
+    var display = false
     $("#donation").hide();
 
 
@@ -34,45 +43,48 @@
     }
 
     donationsocket.onmessage = function (event) {
-        console.log("onmessage");
-        let first = false;
-        if (donations.length === 0){
-            console.log("first");
-            first = true;
-        } // check for first update after pageload
 
         let msg = JSON.parse(event.data);
         console.log(msg);
-        msg.reverse().forEach(function (element) {
-            let newdon = true;
-            for (let i=0; i < donations.length; i ++){
-                if (element.DonationId === donations[i].DonationId){
-                    if (donations[i].Name === "Anonyymi" && donations[i].Message === ""){
-                        donations[i].Name = element.Name;
-                        donations[i].Message = element.Message;
-                        latest.push(element)
+
+        msg["Donations"].forEach(function (d) {
+            if (d["OperationType"] === "insert"){
+                donations.push(d["Donation"]);
+                total += d["Donation"].Amount
+                if (d["Donation"].Name !== "Anonyymi" || d["Donation"].Message !== ""){
+                    latest.push(d["Donation"])
+                    dotags(d["Donation"])
+                }
+            } else if (d["OperationType"] === "firstInsert"){
+                donations.push(d["Donation"]);
+                dotags(d["Donation"]);
+                total += d["Donation"].Amount
+
+            } else if (d["OperationType"] === "update"){
+                for (let i=0; i < donations.length; i ++) {
+                    if (d['Donation'].DonationId === donations[i].DonationId) {
+                        donations[i].Message = d["Donation"].Message;
+                        donations[i].Name = d["Donation"].Name
                     }
-                    newdon = false;
                 }
+                latest.push(d["Donation"])
+                dotags(d["Donation"])
+            } else {
+                console.log("Something terribly wrong")
             }
-            if (newdon){
-                donations.push(element);
-                total += element.Amount;
-                update()
-                if (element.Name !== "Anonyymi" && element.Message !== ""){
-                    latest.push(element)
-                }
-            }
+            update()
+
         });
-        if (first){
-            latest = []
-        } // do not display everything after pageload
+
         if (latest.length > 0){
-            displaydonation()
+            if (!display){
+                display = true
+                displaydonation()
+            }
         }
 
-        var html = ""
-        html += "<table>"
+        var html = "";
+        html += "<table>";
         donations.slice().reverse().forEach(function (donation) {
             html += "<tr><td class='name'>" + donation.Name + "</td>";
             html += "<td class='message'>" + donation.Message + "</td>";
@@ -87,15 +99,60 @@
         $("#donation").text(latest[0].Name + " " + latest[0].Amount + "€");
         setTimeout(removedonation, 15000)
     }
+
     function removedonation() {
         latest.shift();
         $("#donation").hide("slow");
         if (latest.length > 0){
             displaydonation()
+        } else {
+            display = false
         }
     }
-    // setInterval(update, 500);
 
+    function dotags(d) {
+        var htags = []
+        var words = d["Message"].split(" ")
+        for (var i = 0; i < words.length; i++){
+            if (words[i][0] === "#" && words[i].length > 1){
+                htags.push(words[i])
+            }
+        }
+        for (var i = 0; i < htags.length; i++){
+            if (!(htags[i] in hashtags)){
+                hashtags[htags[i]] = {"total": 0, "donates": []}
+            }
+            hashtags[htags[i]]["donates"].push({
+                    "name": d["Name"],
+                    "amount": d["Amount"]/(htags.length),
+                    "msg": d["Message"],
+                })
+            hashtags[htags[i]]["total"] += d["Amount"]/(htags.length)
+            hashtags[htags[i]]["donates"].sort(function (f, s) {
+                return f["amount"] - s["amount"]
+            })
+        }
+
+        var html = "";
+        html += "<table>";
+
+        for (var i = 0; i < Object.keys(hashtags).length; i++) {
+            var tags = Object.keys(hashtags)
+            html += "<tr><td class='name'>" + tags[i] + "</td>";
+            html += "<td class='message'>Total: " + hashtags[tags[i]]["total"] + "</td><td class='amount'></td></tr>";
+            for (var j = 0; j < hashtags[tags[i]]["donates"].length; j++){
+                var dons = hashtags[tags[i]]["donates"]
+                html += "<tr><td class='name'>- " + dons[j]["name"] + "</td>";
+                html += "<td class='message'>" + dons[j]["msg"] + "</td>";
+                html += "<td class='amount'>" + dons[j]["amount"] + "</td></tr>";
+            }
+            html += "<tr><td class='name'>-</td>";
+            html += "<td class='message'>-</td>";
+            html += "<td class='amount'>-</td></tr>";
+        }
+        html += "</table>"
+        tagoutput.innerHTML = html;
+    }
 
     function update() {
         $(".bar").css("width", String(total/goal * 100) + "%" ).text(total + "€")
@@ -140,7 +197,7 @@
         width: 10%;
     }
     .message{
-        width: 65%%;
+        width: 65%;
     }
     .name{
         width: 25%;
@@ -152,7 +209,6 @@
         font-size: 50px;
         text-align: center;
 		background-color: black;
-        font-family: "electricboots";
     }
     #donation{
         position: relative;
@@ -161,7 +217,6 @@
         font-size: 50px;
         text-align: center;
 		background-color: black;
-        font-family: "electricboots";
         z-index: 100;
     }
 
@@ -192,5 +247,14 @@
         box-sizing: border-box;
         margin-bottom: -50px;
     }
+    #outputs{
+        display: flex;
+    }
 
+    #donates{
+        width: 50%;
+    }
+    #tags{
+        width: 50%;
+    }
 </style>
