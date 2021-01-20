@@ -16,14 +16,14 @@ import (
 )
 
 type Donation struct {
-	DonationId        string  `json:"DonationId" bson:"donationId"`
+	DonationID        string  `json:"DonationId" bson:"donationId"`
 	Name              string  `json:"Name" bson:"nameDonator"`
 	Amount            float32 `json:"Amount" bson:"amountMoney"`
 	Message           string  `json:"Message" bson:"message"`
 	MessageAnswer     string  `json:"MessageAnswer" bson:"messageAnswer"`
-	CollectorImageUrl string  `json:"CollectorImageUrl" bson:"collectorImageurl"`
+	CollectorImageURL string  `json:"CollectorImageUrl" bson:"collectorImageurl"`
 	CurrencySymbol    string  `json:"CurrencySymbol" bson:"currencySymbol"`
-	CollectionUrl     string  `json:"CollaectionUrl" bson:"collectionUrl"`
+	CollectionURL     string  `json:"CollaectionUrl" bson:"collectionUrl"`
 	TransactionDate   string  `json:"TransactionDate" bson:"transactionDate"`
 }
 
@@ -43,7 +43,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func getFromApi(url string) []byte {
+func getFromAPI(url string) []byte {
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -60,7 +60,7 @@ func getFromApi(url string) []byte {
 func getGoal(url string) int {
 	var goal int
 
-	responseData := getFromApi(url)
+	responseData := getFromAPI(url)
 	json.Unmarshal(responseData, &goal)
 
 	return goal
@@ -70,7 +70,7 @@ func getGoal(url string) int {
 func getDonations(url string) Donations {
 	var donations Donations
 
-	responseData := getFromApi(url)
+	responseData := getFromAPI(url)
 	json.Unmarshal(responseData, &donations)
 
 	return donations
@@ -88,7 +88,7 @@ func inList(donation Donation, donations Donations) bool {
 
 }
 
-func apiPoll(collection *mongo.Collection) {
+func apiPoll(ctx context.Context, collection *mongo.Collection) {
 	for {
 
 		fetchDonations := getDonations("https://vauhtijuoksu.otit.fi/api/donations")
@@ -96,8 +96,8 @@ func apiPoll(collection *mongo.Collection) {
 		for _, donation := range fetchDonations {
 
 			var result Donation
-			filter := bson.D{{"donationId", donation.DonationId}}
-			err := collection.FindOne(context.TODO(), filter).Decode(&result)
+			filter := bson.D{{Key: "donationId", Value: donation.DonationID}}
+			err := collection.FindOne(ctx, filter).Decode(&result)
 			if err != nil {
 				if err.Error() == "mongo: no documents in result" {
 					insertResult, err := collection.InsertOne(context.TODO(), donation)
@@ -110,10 +110,10 @@ func apiPoll(collection *mongo.Collection) {
 				}
 			} else if result.Name == "Anonyymi" && result.Message == "" {
 				update := bson.D{
-					{"$set", bson.D{{"message", donation.Message}}},
-					{"$set", bson.D{{"nameDonator", donation.Name}}},
+					{Key: "$set", Value: bson.D{{Key: "message", Value: donation.Message}}},
+					{Key: "$set", Value: bson.D{{Key: "nameDonator", Value: donation.Name}}},
 				}
-				updateResult, err := collection.UpdateOne(context.TODO(), filter, update)
+				updateResult, err := collection.UpdateOne(ctx, filter, update)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -127,13 +127,13 @@ func apiPoll(collection *mongo.Collection) {
 
 func main() {
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx := context.Background()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = client.Ping(context.TODO(), nil)
+	err = client.Ping(ctx, nil)
 
 	if err != nil {
 		log.Fatal(err)
@@ -142,7 +142,7 @@ func main() {
 	fmt.Println("Connected to MongoDB")
 
 	collection := client.Database("gonator").Collection("donations")
-	go apiPoll(collection)
+	go apiPoll(ctx, collection)
 
 	http.HandleFunc("/donations", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -152,14 +152,14 @@ func main() {
 		}
 
 		findOptions := options.Find()
-		cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+		cur, err := collection.Find(ctx, bson.D{{}}, findOptions)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		var updateWebsocket UpdateWebsocket
 
-		for cur.Next(context.TODO()) {
+		for cur.Next(ctx) {
 			var donation Donation
 			var donationMessage DonationMessage
 
@@ -179,18 +179,14 @@ func main() {
 			fmt.Println(err)
 		}
 
-		ctx := context.Background()
-		clientWach, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
 		if err != nil {
 			log.Fatal(err)
 		}
-		collection := clientWach.Database("gonator").Collection("donations")
 
 		cs, err := collection.Watch(ctx, mongo.Pipeline{}, options.ChangeStream().SetFullDocument(options.UpdateLookup))
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer cs.Close(ctx)
 
 		for cs.Next(ctx) {
 			// var donations Donations
@@ -230,10 +226,10 @@ func main() {
 			time.Sleep(60 * time.Second)
 		}
 	})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
-
 
 	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "bar.html")
@@ -241,7 +237,7 @@ func main() {
 
 	http.HandleFunc("/getdonations", func(w http.ResponseWriter, r *http.Request) {
 		findOptions := options.Find()
-		cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+		cur, err := collection.Find(ctx, bson.D{{}}, findOptions)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -251,13 +247,11 @@ func main() {
 		}
 		e, err := json.Marshal(donations)
 		if err != nil {
-			fmt.Println(err)
-			return
+			log.Fatal(err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(e)
 	})
 
 	http.ListenAndServe(":8080", nil)
-
 }
