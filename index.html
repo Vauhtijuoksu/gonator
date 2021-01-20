@@ -7,9 +7,10 @@
     <div class="progresbarholder">
 
             <div class="bargoal">eeE</div>
-            <div class="bar" style="width:12%">56€</div>
+            <div class="bar" style="width:12%">56e</div>
         </div>
 </div>
+<input type="range" min="1" max="100" value="50" class="slider" id="myRange" onchange="updateSlider(this.value)">
 <div id="donation"></div>
 <div id="outputs">
 <div id="donates">
@@ -20,12 +21,13 @@
     </div>
     </div>
 </body>
-
 <script>
+    var checkboxes = []
+    let incentives_url = "https://vauhtijuoksu.otit.fi/api/incentives";
     var output = document.getElementById("output");
     var tagoutput = document.getElementById("tagoutput");
-    var donationsocket = new WebSocket("ws://localhost:8080/donations");
-    var goalsocket = new WebSocket("ws://localhost:8080/goal");
+    var donationsocket = new WebSocket("ws://35.228.199.247:443/donations");
+    var goalsocket = new WebSocket("ws://35.228.199.247:443/goal");
     var total = 0;
     var donations = []
     var latest = []
@@ -34,19 +36,29 @@
     var display = false
     $("#donation").hide();
 
-
+    function updateSlider(s) {
+        $("#donates").css("width", String(s) + "%" )
+        $("#tags").css("width", String(100 - s) + "%" )
+    }
 
     goalsocket.onmessage = function (event) {
-
+        console.log("goalchange")
 	    goal = parseInt(event.data);
 	    update()
+    }
+
+    function CheckCheckbox(e) {
+        if($.inArray(e.id, checkboxes) !== -1) {
+            checkboxes.splice(checkboxes.indexOf(e.id),1)
+        } else {
+            checkboxes.push(e.id)
+        }
+
     }
 
     donationsocket.onmessage = function (event) {
 
         let msg = JSON.parse(event.data);
-        console.log(msg);
-
         msg["Donations"].forEach(function (d) {
             if (d["OperationType"] === "insert"){
                 donations.push(d["Donation"]);
@@ -86,17 +98,23 @@
         var html = "";
         html += "<table>";
         donations.slice().reverse().forEach(function (donation) {
-            html += "<tr><td class='name'>" + donation.Name + "</td>";
+            if($.inArray(donation.DonationId, checkboxes) !== -1){
+                html += "<tr><td class='name'><input type='checkbox' id='" + donation.DonationId + "' checked onclick='return CheckCheckbox(this)'/> " + donation.Name + "</td>";
+            }
+            else {
+                html += "<tr><td class='name'><input type='checkbox' id='" + donation.DonationId + "' onclick='return CheckCheckbox(this)'/> " + donation.Name + "</td>";
+            }
             html += "<td class='message'>" + donation.Message + "</td>";
-            html += "<td class='amount'>" + donation.Amount + "€" + "</td></tr>";
+            html += "<td class='amount'>" + donation.Amount + "e" + "</td></tr>";
         });
         html += "</table>"
         output.innerHTML = html;
     };
+
+
     function displaydonation() {
-        console.log("displaydon")
         $("#donation").show("slow")
-        $("#donation").text(latest[0].Name + " " + latest[0].Amount + "€");
+        $("#donation").text(latest[0].Name + " " + latest[0].Amount + "e");
         setTimeout(removedonation, 15000)
     }
 
@@ -110,54 +128,145 @@
         }
     }
 
-    function dotags(d) {
-        var htags = []
-        var words = d["Message"].split(" ")
-        for (var i = 0; i < words.length; i++){
-            if (words[i][0] === "#" && words[i].length > 1){
-                htags.push(words[i])
-            }
-        }
-        for (var i = 0; i < htags.length; i++){
-            if (!(htags[i] in hashtags)){
-                hashtags[htags[i]] = {"total": 0, "donates": []}
-            }
-            hashtags[htags[i]]["donates"].push({
-                    "name": d["Name"],
-                    "amount": d["Amount"]/(htags.length),
-                    "msg": d["Message"],
-                })
-            hashtags[htags[i]]["total"] += d["Amount"]/(htags.length)
-            hashtags[htags[i]]["donates"].sort(function (f, s) {
-                return f["amount"] - s["amount"]
-            })
-        }
-
-        var html = "";
-        html += "<table>";
-
-        for (var i = 0; i < Object.keys(hashtags).length; i++) {
-            var tags = Object.keys(hashtags)
-            html += "<tr><td class='name'>" + tags[i] + "</td>";
-            html += "<td class='message'>Total: " + hashtags[tags[i]]["total"] + "</td><td class='amount'></td></tr>";
-            for (var j = 0; j < hashtags[tags[i]]["donates"].length; j++){
-                var dons = hashtags[tags[i]]["donates"]
-                html += "<tr><td class='name'>- " + dons[j]["name"] + "</td>";
-                html += "<td class='message'>" + dons[j]["msg"] + "</td>";
-                html += "<td class='amount'>" + dons[j]["amount"] + "</td></tr>";
-            }
-            html += "<tr><td class='name'>-</td>";
-            html += "<td class='message'>-</td>";
-            html += "<td class='amount'>-</td></tr>";
-        }
-        html += "</table>"
-        tagoutput.innerHTML = html;
+    function dotags() {
+        getIncentives()
     }
 
     function update() {
-        $(".bar").css("width", String(total/goal * 100) + "%" ).text(total + "€")
-        $(".bargoal").text(goal + "€")
+        $(".bar").css("width", String(total/goal * 100) + "%" ).text(total + "e")
+        $(".bargoal").text(goal + "e")
     }
+
+
+
+    function getIncentives() {
+
+
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", incentives_url);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                incentives = JSON.parse(xhr.responseText);
+                updateIncentives()
+            }
+        }
+        xhr.send();
+    }
+
+
+    function updateIncentives() {
+        var html = "";
+        for (var i in incentives["incentives"]){
+
+            if (new Date(incentives["incentives"][i]["endtime"]) > Date.now()) {
+                var id = incentives["incentives"][i]["id"]
+                var div = "";
+                div += '<div class="incentive_game">' + incentives["incentives"][i]["game"] + '</div>';
+                div += '<div class="incentive_title">' + incentives["incentives"][i]["title"] + '</div>';
+                if (incentives["incentives"][i]["type"] === "option"){
+                    var order = [];
+                    for (var o in incentives["incentives"][i]["parameters"].split("/")){
+                        var amount = 0
+                        if (incentives["amount"][id.toString()]){
+                            if (incentives["amount"][id.toString()][(parseInt(o)+1).toString()]){
+                                amount = incentives["amount"][id.toString()][(parseInt(o)+1).toString()]
+                            }
+                        }
+                        order.push([o, amount])
+
+                    }
+                    order.sort(function(a,b){return b[1] - a[1];});
+                    for (var j=0; j < order.length; j++){
+                        var o = order[j][0];
+                        var amount = 0;
+                        var max = 1;
+
+                        if (incentives["amount"][id.toString()]){
+                            if (incentives["amount"][id.toString()][(parseInt(o)+1).toString()]){
+                                amount = incentives["amount"][id.toString()][(parseInt(o)+1).toString()]
+                            }
+                        }
+                        if (incentives["max"][id.toString()]){
+                            max = incentives["max"][id.toString()]
+                        }
+
+
+                        div += '<div class="ibargoal">' + amount + 'e</div>';
+                        div += '<div class="ibar" style="width:' + parseFloat(amount) /  parseFloat(max)  * 100 + '%'
+                        if (parseFloat(amount) >= parseFloat(max)){
+                            div += '; background-color: #224754'
+                        }
+                        div += '">' + incentives["incentives"][i]["parameters"].split("/")[o] + '</div>';
+                    }
+                }
+                else if (incentives["incentives"][i]["type"] === "upgrade"){
+                    var amount = 0
+                    var max = incentives["incentives"][i]["parameters"]
+                    if (incentives["amount"][id.toString()]){
+                        if (incentives["amount"][id.toString()][null]){
+                            amount = incentives["amount"][id.toString()][null]
+                        }
+                    }
+
+
+                    div += '<div class="ibargoal">' + max + 'e</div>';
+                    div += '<div class="ibar" style="width:' + parseFloat(amount) /  parseFloat(max)  * 100 + '%'
+                    if (parseFloat(amount) >= parseFloat(max)){
+                        div += '; background-color: #224754'
+                    }
+                    div += '">' + amount + 'e</div>';
+
+                }
+
+                else if (incentives["incentives"][i]["type"] === "open"){
+                    if (i.toString() in Object.keys(incentives["amount"]) ){
+                        var keys = Object.keys(incentives["amount"][id]);
+
+                        var order = [];
+                        for (var e in incentives["amount"][id]){
+                            var amount = 0
+                            if (incentives["amount"][id.toString()]){
+                                if (incentives["amount"][id.toString()][e]){
+                                    amount = incentives["amount"][id.toString()][e]
+                                }
+                            }
+                            order.push([e, amount])
+
+                        }
+                        order.sort(function(a,b){return b[1] - a[1];});
+                        for (var j=0; j < order.length; j++){
+                            var o = order[j][0];
+                            var amount = 0;
+                            var max = 1;
+
+                            if (incentives["amount"][id.toString()]){
+                                if (incentives["amount"][id.toString()][o]){
+                                    amount = incentives["amount"][id.toString()][o]
+                                }
+                            }
+                            if (incentives["max"][id.toString()]){
+                                max = incentives["max"][id.toString()]
+                            }
+
+
+                            div += '<div class="ibargoal">' + amount + 'e</div>';
+                            div += '<div class="ibar" style="width:' + parseFloat(amount) /  parseFloat(max)  * 100 + '%'
+                            if (parseFloat(amount) >= parseFloat(max)){
+                                div += '; background-color: #224754'
+                            }
+                            div += '">' + o + '</div>';
+                        }
+                    } else {
+                        div += 'Tälle kannustimelle ei ole vielä ehdotuksia!'
+                    }
+                }
+                div += '</div>'
+                html += '<div class="incentive">' + div + '</div>'
+            }
+        }
+        document.getElementById("tagoutput").innerHTML = html;
+    }
+
 
 </script>
 
@@ -170,6 +279,7 @@
     html {
         padding: 0;
         margin: 0;
+        overflow-x: hidden;
         max-width: 100%;
     }
     body {
@@ -247,14 +357,77 @@
         box-sizing: border-box;
         margin-bottom: -50px;
     }
+    .ibar{
+        background-color: #542a53;
+        border-radius: 4px;
+        height: 20px;
+        padding-left: 13px;
+        box-sizing: border-box;
+        text-align: left;
+        line-height: 20px;
+        margin-bottom: 5px;
+    }
+    .ibargoal{
+        float: right;
+        height: 20px;
+        line-height: 20px;
+        width: 100%;
+        text-align: right;
+        padding-right: 13px;
+        box-sizing: border-box;
+        margin-bottom: -20px;
+    }
     #outputs{
         display: flex;
     }
-
+    .incentive{
+        padding-right: 5px;
+        padding-bottom: 10px;
+    }
     #donates{
         width: 50%;
     }
     #tags{
         width: 50%;
     }
+    input[type=checkbox]
+    {
+      /* Double-sized Checkboxes */
+      -ms-transform: scale(2); /* IE */
+      -moz-transform: scale(2); /* FF */
+      -webkit-transform: scale(2); /* Safari and Chrome */
+      -o-transform: scale(2); /* Opera */
+      transform: scale(2);
+      padding: 10px;
+    }
+    .slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  background: #4CAF50;
+  cursor: pointer;
+}
 </style>

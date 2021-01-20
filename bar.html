@@ -17,8 +17,8 @@
 
 <script>
     var output = document.getElementById("output");
-    var donationsocket = new WebSocket("wss://gonator2.glukoo.si/donations");
-    var goalsocket = new WebSocket("wss://gonator2.glukoo.si/goal");
+    var donationsocket = new WebSocket("ws://35.228.199.247:443/donations");
+    var goalsocket = new WebSocket("ws://35.228.199.247:443/goal");
     var total = 0;
     var donations = []
     var latest = []
@@ -142,7 +142,7 @@
     }
 
     .bar{
-        background-color: #ffff00;
+        background-color: #01fffc;
         border-radius: 10px;
         height: 100%;
         padding-left: 13px;
