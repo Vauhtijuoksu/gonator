@@ -76,8 +76,8 @@ func donations(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	findOptions := options.Find()
-	cur, err := collection.Find(ctx, bson.D{{}}, findOptions)
+	// Get all donations and send them first.
+	cur, err := collection.Find(ctx, bson.D{{}}, options.Find())
 	if err != nil {
 		log.Println(err)
 	}
@@ -104,13 +104,13 @@ func donations(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
+	// Watch if there are changes at mongodb, if there are, send them.
 	cs, err := collection.Watch(ctx, mongo.Pipeline{}, options.ChangeStream().SetFullDocument(options.UpdateLookup))
 	if err != nil {
 		log.Println(err)
 	}
 
 	for cs.Next(ctx) {
-		// var donations Donations
 		var updateWebsocket UpdateWebsocket
 		var donationMessage DonationMessage
 
@@ -119,8 +119,6 @@ func donations(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 		updateWebsocket.Donations = append(updateWebsocket.Donations, donationMessage)
-		fmt.Println(updateWebsocket)
-		// Write message to browser
 		if err := conn.WriteJSON(updateWebsocket); err != nil {
 			log.Println(err)
 		}
@@ -139,7 +137,6 @@ func goal(w http.ResponseWriter, r *http.Request) {
 		fetchgoal := helpers.GetGoal("http://192.168.43.156:5000/api/goal")
 		if fetchgoal != goal {
 			goal = fetchgoal
-			// Write message to browser
 			if err := conn.WriteJSON(goal); err != nil {
 				log.Println(err)
 			}
@@ -149,8 +146,7 @@ func goal(w http.ResponseWriter, r *http.Request) {
 }
 
 func getDonations(w http.ResponseWriter, r *http.Request) {
-	findOptions := options.Find()
-	cur, err := collection.Find(ctx, bson.D{{}}, findOptions)
+	cur, err := collection.Find(ctx, bson.D{{}}, options.Find())
 	if err != nil {
 		log.Println(err)
 	}

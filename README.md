@@ -1,5 +1,10 @@
 gonator
 =======
 
+dev container:
 
-`docker-compose up` or `go run main.go`, then `localhost:8080`
+`docker-compose -f docker-compose.yml -f docker-compose-dev.yml up --build`
+
+prod container:
+
+`docker-compose up --build`

@@ -1,0 +1,7 @@
+version: '3.4'
+services:
+    gonator:
+        build:
+            dockerfile: dev.Dockerfile
+        volumes:
+         - ./:/app
