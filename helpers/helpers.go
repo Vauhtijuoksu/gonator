@@ -21,37 +21,42 @@ type Donation struct {
 
 type Donations []Donation
 
-func GetFromAPI(url string) []byte {
+func GetFromAPI(url string) ([]byte, error) {
 
 	response, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
+		return nil, err
 	}
 	responseData, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		fmt.Println(err)
+		return nil, err
 	}
 
-	return responseData
+	return responseData, nil
 }
 
 func GetGoal(url string) int {
 	var goal int
 
-	responseData := GetFromAPI(url)
+	responseData, _ := GetFromAPI(url)
 	json.Unmarshal(responseData, &goal)
 
 	return goal
 
 }
 
-func GetDonations(url string) Donations {
+func GetDonations(url string) (Donations, error) {
 	var donations Donations
 
-	responseData := GetFromAPI(url)
+	responseData, err := GetFromAPI(url)
+	if err != nil {
+		return nil, err
+	}
 	json.Unmarshal(responseData, &donations)
 
-	return donations
+	return donations, nil
 }
 
 func inList(donation Donation, donations Donations) bool {

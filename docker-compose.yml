@@ -1,4 +1,4 @@
-version: '3'
+version: '3.4'
 services:
     gonator:
         build:
@@ -8,51 +8,20 @@ services:
             - "8080:8080"
         networks:
             - network1
+    mongodb:
+        container_name: mongodb4.4
+        hostname: mongodb
+        image: mongo:4.4.0
         volumes:
-            - ./index.html:/index.html
-    mongo1:
-        image: mongo:4.2
-        volumes:
-            - "./mongodata1:/data/db"
+            - ./data/db:/data/db
+            - ./scripts/mongoinit:/docker-entrypoint-initdb.d:ro
         networks:
             - network1
-        ports:
-            - "30001:27017"
-        environment:
-            - MONGODB_INITDB_DATABASE=gonator
-        command: ["mongod", "--replSet", "jump-set"]
-
-    mongo2:
-        image: mongo:4.2
-        volumes:
-            - "./mongodata2:/data/db"
-        networks:
-            - network1
-        ports:
-            - "30002:27017"
-        environment:
-            - MONGODB_INITDB_DATABASE=gonator
-        command: ["mongod", "--replSet", "jump-set"]
-
-    mongo3:
-        image: mongo:4.2
-        volumes:
-            - "./mongodata3:/data/db"
-        networks:
-            - network1
-        environment:
-            - MONGODB_INITDB_DATABASE=gonator
-        ports:
-            - "30003:27017"
-        command: ["mongod", "--replSet", "jump-set"]
-
-    mongosetup:
-        image: mongo:4.2
-        volumes:
-            - ./scripts:/scripts
-        networks:
-            - network1
-        entrypoint: ["bash", "/scripts/mongoSetup.sh"]
+        healthcheck:
+            test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongo --quiet) -eq 1
+            interval: 10s
+            start_period: 30s
+        command: mongod --replSet "rs0"
 
 networks:
    network1:

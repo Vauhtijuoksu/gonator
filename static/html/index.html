@@ -26,8 +26,8 @@
     let incentives_url = "https://vauhtijuoksu.otit.fi/api/incentives";
     var output = document.getElementById("output");
     var tagoutput = document.getElementById("tagoutput");
-    var donationsocket = new WebSocket("ws://35.228.199.247:443/donations");
-    var goalsocket = new WebSocket("ws://35.228.199.247:443/goal");
+    var donationsocket = new WebSocket("ws://localhost:8080/donations");
+    var goalsocket = new WebSocket("ws:/localhost:8080/goal");
     var total = 0;
     var donations = []
     var latest = []

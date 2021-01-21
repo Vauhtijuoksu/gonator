@@ -14,7 +14,11 @@ import (
 func Poll(ctx context.Context, collection *mongo.Collection, url string) {
 	for {
 
-		fetchDonations := helpers.GetDonations(url)
+		fetchDonations, err := helpers.GetDonations(url)
+		if err != nil {
+			fmt.Println("Fetch failed, trying again")
+			continue
+		}
 
 		for _, donation := range fetchDonations {
 

@@ -38,7 +38,7 @@ var (
 func main() {
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo1:27017"))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongodb:27017"))
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func main() {
 	log.Println("Connected to MongoDB")
 
 	collection = client.Database("gonator").Collection("donations")
-	go poll.Poll(ctx, collection, "http://192.168.43.156:5001/donates")
+	go poll.Poll(ctx, collection, "https://potti.mieli.fi/f/Donation/GetDonations/?collectionId=COL-16-2330&pageSize=50&startAt=0")
 
 	http.HandleFunc("/", index)
 	http.HandleFunc("/donations", donations)
@@ -66,7 +66,7 @@ func main() {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
+	http.ServeFile(w, r, "static/html/index.html")
 }
 
 func donations(w http.ResponseWriter, r *http.Request) {
@@ -167,5 +167,5 @@ func getDonations(w http.ResponseWriter, r *http.Request) {
 }
 
 func bar(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "bar.html")
+	http.ServeFile(w, r, "static/html/bar.html")
 }
