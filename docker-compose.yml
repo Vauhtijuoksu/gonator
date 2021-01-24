@@ -8,8 +8,10 @@ services:
             - "8080:8080"
         networks:
             - network1
+        depends_on:
+            - mongodb
+
     mongodb:
-        container_name: mongodb4.4
         hostname: mongodb
         image: mongo:4.4.0
         volumes:
