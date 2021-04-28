@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func Poll(ctx context.Context, collection *mongo.Collection, url string, pollRate int) {
+func Poll(ctx context.Context, collection *mongo.Collection, url string, pollRate time.Duration) {
 	for range time.Tick(time.Second * pollRate)  {
 
 		fetchDonations, err := helpers.GetDonations(url)

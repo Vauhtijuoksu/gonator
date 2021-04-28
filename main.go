@@ -54,7 +54,7 @@ func main() {
 	log.Println("Connected to MongoDB")
 
 	collection = client.Database("gonator").Collection("donations")
-	go poll.Poll(ctx, collection, "https://potti.mieli.fi/f/Donation/GetDonations/?collectionId=COL-16-2330&pageSize=50&startAt=0")
+	go poll.Poll(ctx, collection, "https://potti.mieli.fi/f/Donation/GetDonations/?collectionId=COL-16-2330&pageSize=50&startAt=0", 10)
 
 	http.HandleFunc("/", index)
 	http.HandleFunc("/donations", donations)
