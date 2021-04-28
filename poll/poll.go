@@ -11,8 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func Poll(ctx context.Context, collection *mongo.Collection, url string) {
-	for {
+func Poll(ctx context.Context, collection *mongo.Collection, url string, pollRate int) {
+	for range time.Tick(time.Second * pollRate)  {
 
 		fetchDonations, err := helpers.GetDonations(url)
 		if err != nil {
@@ -45,9 +45,10 @@ func Poll(ctx context.Context, collection *mongo.Collection, url string) {
 					log.Println(err)
 				}
 
-				fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+				if updateResult.ModifiedCount > 0 {
+					fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+				}
 			}
 		}
-		time.Sleep(10 * time.Second)
 	}
 }

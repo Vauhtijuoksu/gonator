@@ -134,7 +134,7 @@ func goal(w http.ResponseWriter, r *http.Request) {
 
 	var goal int
 	for {
-		fetchgoal := helpers.GetGoal("http://192.168.43.156:5000/api/goal")
+		fetchgoal := helpers.GetGoal("https://vauhtijuoksu.fi/api/goal")
 		if fetchgoal != goal {
 			goal = fetchgoal
 			if err := conn.WriteJSON(goal); err != nil {
