@@ -1,11 +1,10 @@
-version: '3.4'
+version: '3.7'
+
 services:
     gonator:
         build:
             context: "."
             dockerfile: "Dockerfile"
-        ports:
-            - "8080:8080"
         networks:
             - network1
         depends_on:
@@ -14,6 +13,8 @@ services:
     mongodb:
         hostname: mongodb
         image: mongo:4.4.0
+        logging:
+            driver: none
         volumes:
             - ./data/db:/data/db
             - ./scripts/mongoinit:/docker-entrypoint-initdb.d:ro
@@ -25,5 +26,22 @@ services:
             start_period: 30s
         command: mongod --replSet "rs0"
 
+    caddy:
+        image: caddy:2.2.1
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./config/Caddyfile:/etc/caddy/Caddyfile
+            - caddy_data:/data
+            - caddy_config:/config
+        networks:
+            - network1
+
+volumes:
+    caddy_data:
+    caddy_config:
+
 networks:
-   network1:
+    network1:

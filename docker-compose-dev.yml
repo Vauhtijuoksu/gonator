@@ -1,7 +1,14 @@
-version: '3.4'
+version: '3.7'
+
 services:
     gonator:
-        build:
-            dockerfile: dev.Dockerfile
         volumes:
          - ./:/app
+        ports:
+            - "8080:8080"
+
+    caddy:
+        volumes:
+            - ./config/local.Caddyfile:/etc/caddy/Caddyfile
+        ports:
+            - "8081:8081"

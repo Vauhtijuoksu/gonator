@@ -1,0 +1,9 @@
+localhost:8081 {
+    reverse_proxy gonator:8080
+    @websockets {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+
+    reverse_proxy @websockets gonator:8080
+}
