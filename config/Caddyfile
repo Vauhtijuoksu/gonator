@@ -1,4 +1,4 @@
-gonator.vauhtijuoksi.fi {
+gonator.vauhtijuoksu.fi {
     reverse_proxy gonator:8080
     @websockets {
         header Connection *Upgrade*
@@ -8,7 +8,7 @@ gonator.vauhtijuoksi.fi {
     reverse_proxy @websockets gonator:8080
 }
 
-donator.vauhtijuoksi.fi {
+donator.vauhtijuoksu.fi {
     reverse_proxy donator:5000
     @websockets {
         header Connection *Upgrade*
