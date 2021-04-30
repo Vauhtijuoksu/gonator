@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/rs/cors"
 )
 
 type DonationMessage struct {
@@ -56,13 +57,15 @@ func main() {
 	collection = client.Database("gonator").Collection("donations")
 	go poll.Poll(ctx, collection, "https://potti.mieli.fi/f/Donation/GetDonations/?collectionId=COL-16-2330&pageSize=50&startAt=0", 10)
 
-	http.HandleFunc("/", index)
-	http.HandleFunc("/donations", donations)
-	http.HandleFunc("/goal", goal)
-	http.HandleFunc("/getDonations", getDonations)
-	http.HandleFunc("/bar", bar)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", index)
+	mux.HandleFunc("/donations", donations)
+	mux.HandleFunc("/goal", goal)
+	mux.HandleFunc("/getDonations", getDonations)
+	mux.HandleFunc("/bar", bar)
 
-	http.ListenAndServe(":8080", nil)
+	handler := cors.Default().Handler(mux)
+	http.ListenAndServe(":8080", handler)
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
