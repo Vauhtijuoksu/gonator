@@ -9,6 +9,7 @@ import (
 	"github.com/Vauhtijuoksu/gonator/helpers"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Poll(ctx context.Context, collection *mongo.Collection, url string, pollRate time.Duration) {
@@ -27,6 +28,7 @@ func Poll(ctx context.Context, collection *mongo.Collection, url string, pollRat
 			err := collection.FindOne(ctx, filter).Decode(&result)
 			if err != nil {
 				if err.Error() == "mongo: no documents in result" {
+					donation.TimeStamp = primitive.NewDateTimeFromTime(time.Now().AddDate(-1, 0, 0))
 					insertResult, err := collection.InsertOne(context.TODO(), donation)
 					fmt.Println("Inserted document: ", insertResult.InsertedID)
 					if err != nil {

@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Donation struct {
-	DonationID        string  `json:"DonationId" bson:"donationId"`
+	DonationID        string `json:"DonationId" bson:"donationId"`
+	TimeStamp         primitive.DateTime  `json:"TimeStamp" bson:"TimeStamp"`
 	Name              string  `json:"Name" bson:"nameDonator"`
 	Amount            float32 `json:"Amount" bson:"amountMoney"`
 	Message           string  `json:"Message" bson:"message"`
@@ -55,6 +58,8 @@ func GetDonations(url string) (Donations, error) {
 		return nil, err
 	}
 	json.Unmarshal(responseData, &donations)
+
+
 
 	return donations, nil
 }
